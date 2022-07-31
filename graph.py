@@ -234,14 +234,14 @@ if __name__ == "__main__":
     print("-----")
     print("-----")
 
-    (train_graph, train_edges, train_labels), (
+    (train_graph, train_examples, train_labels), (
         test_graph,
-        test_edges,
+        test_examples,
         test_labels,
     ) = load_splits()[0]
 
     print("Test graph:")
-    print(f"\t# edges: {len(test_edges)}.")
+    print(f"\t# edges: {len(test_examples)}.")
     print(f"\tLabel distribution: {Counter(test_labels)}.")
     print(test_graph.info())
 
@@ -250,6 +250,6 @@ if __name__ == "__main__":
     print("-----")
 
     print("Train graph:")
-    print(f"\t# edges: {len(train_edges)}.")
+    print(f"\t# edges: {len(train_examples)}.")
     print(f"\tLabel distribution: {Counter(train_labels)}.")
     print(train_graph.info())
