@@ -194,7 +194,7 @@ def load_splits(
             [df, positive_test_edges.drop("Label", axis=1)]
         ).drop_duplicates(keep=False)
 
-        test_graph, test_edges, test_labels = _extract_graph_edges_labels(
+        test_graph, test_examples, test_labels = _extract_graph_edges_labels(
             test_df,
             positive_test_edges,
             negative_test_edges,
@@ -209,7 +209,7 @@ def load_splits(
             [test_df, positive_train_edges.drop("Label", axis=1)]
         ).drop_duplicates(keep=False)
 
-        train_graph, train_edges, train_labels = _extract_graph_edges_labels(
+        train_graph, train_examples, train_labels = _extract_graph_edges_labels(
             train_df,
             positive_train_edges,
             negative_train_edges,
@@ -219,8 +219,8 @@ def load_splits(
 
         splits.append(
             (
-                (train_graph, train_edges, train_labels),
-                (test_graph, test_edges, test_labels),
+                (train_graph, train_examples, train_labels),
+                (test_graph, test_examples, test_labels),
             )
         )
 
