@@ -77,7 +77,7 @@ def _make_graph(
     df_phn: pd.DataFrame,
     genes: Optional[np.ndarray] = None,
     phenotypes: Optional[np.ndarray] = None,
-    add_master: bool = False,
+    homogenous: bool = True,
 ) -> StellarGraph:
     df = _merge_dfs(df_gen, df_phn)
 
@@ -87,31 +87,24 @@ def _make_graph(
     if phenotypes is None:
         phenotypes = _get_phenotypes(df_phn)
 
-    if add_master:
-        dm = pd.concat(
-            [
-                pd.DataFrame(
-                    list(itertools.product(["Master"], genes)),
-                    columns=["Nod_A", "Nod_B"],
-                ),
-                pd.DataFrame(
-                    list(itertools.product(["Master"], phenotypes)),
-                    columns=["Nod_A", "Nod_B"],
-                ),
-            ]
-        )
-        dm["Type"] = "M"
+    if homogenous:
+        x_gen = np.zeros((len(genes), len(phenotypes) + 1))
+        x_gen[:, -1] = 1
+        x_phn = np.zeros((len(phenotypes), len(phenotypes) + 1))
+
+        for i, _ in enumerate(phenotypes):
+            x_phn[i, i] = 1
 
         graph = StellarGraph(
-            {
-                "genes": pd.DataFrame(index=genes),
-                "phenotypes": pd.DataFrame(index=phenotypes),
-                "master": pd.DataFrame(index=["Master"]),
-            },
-            edges=pd.concat([df, dm]).reset_index(drop=True),
+            pd.concat(
+                [
+                    pd.DataFrame(x_gen, index=genes),
+                    pd.DataFrame(x_phn, index=phenotypes),
+                ]
+            ),
+            edges=df.drop("Type", axis=1),
             source_column="Nod_A",
             target_column="Nod_B",
-            edge_type_column="Type",
         )
     else:
         graph = StellarGraph(
@@ -129,12 +122,12 @@ def _make_graph(
 
 
 def load_full_graph(
-    drop_disconnected: bool = True, add_master: bool = False
+    drop_disconnected: bool = True, homogenous: bool = True
 ) -> StellarGraph:
     df_gen = _load_gen_df()
     df_phn = _load_phn_df(drop_disconnected)
 
-    graph = _make_graph(df_gen, df_phn, add_master=add_master)
+    graph = _make_graph(df_gen, df_phn, homogenous=homogenous)
 
     return graph
 
@@ -145,12 +138,12 @@ def _extract_graph_edges_labels(
     negative_edges: pd.DataFrame,
     genes: Optional[np.ndarray] = None,
     phenotypes: Optional[np.ndarray] = None,
-    add_master: bool = False,
+    homogenous: bool = True,
 ) -> tuple:
     df_gen = df[df["Type"] == "G2G"]
     df_phn = df[df["Type"] == "P2G"]
 
-    graph = _make_graph(df_gen, df_phn, genes, phenotypes, add_master)
+    graph = _make_graph(df_gen, df_phn, genes, phenotypes, homogenous=homogenous)
     edges = np.concatenate(
         [
             positive_edges[["Nod_A", "Nod_B"]].values,
@@ -169,9 +162,10 @@ def _extract_graph_edges_labels(
 
 def load_splits(
     n_splits: int = 5,
-    train_edges_size: int = 0.25,
+    train_edges_size: int = 0.2,
     sample_train_negatives: bool = True,
-    add_master: bool = False,
+    sample_test_negatives: bool = False,
+    homogenous: bool = True,
     drop_disconnected: bool = True,
     seed: int = 0,
 ) -> list:
@@ -216,6 +210,11 @@ def load_splits(
                 random_state=seed,
             )[1]
 
+        if sample_test_negatives:
+            test_edges[i][1] = test_edges[i][1].sample(
+                len(test_edges[i][0]), random_state=seed
+            )
+
     splits = []
 
     for i in range(n_splits):
@@ -232,7 +231,7 @@ def load_splits(
             negative_test_edges,
             genes=genes,
             phenotypes=phenotypes,
-            add_master=add_master,
+            homogenous=homogenous,
         )
 
         positive_train_edges = train_edges[i][0]
@@ -248,7 +247,7 @@ def load_splits(
             negative_train_edges,
             genes=genes,
             phenotypes=phenotypes,
-            add_master=add_master,
+            homogenous=homogenous,
         )
 
         splits.append(
