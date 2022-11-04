@@ -72,12 +72,21 @@ def _get_positive_negative_edges(
     return positive_edges, negative_edges
 
 
+def _load_go_terms_df(n: int = -1) -> pd.DataFrame:
+    df = pd.read_csv(DATA_PATH / "GoDataset_1000.csv", index_col=0)
+    df = df[df.sum().sort_values(ascending=False).index[:n]]
+
+    return df
+
+
 def _make_graph(
     df_gen: pd.DataFrame,
     df_phn: pd.DataFrame,
     genes: Optional[np.ndarray] = None,
     phenotypes: Optional[np.ndarray] = None,
     homogenous: bool = True,
+    use_go_terms: bool = False,
+    n_go_terms: int = -1,
 ) -> StellarGraph:
     df = _merge_dfs(df_gen, df_phn)
 
@@ -94,6 +103,15 @@ def _make_graph(
 
         for i, _ in enumerate(phenotypes):
             x_phn[i, i] = 1
+
+        if use_go_terms:
+            df_go = _load_go_terms_df(n_go_terms)
+            x_go = df_go.reindex(genes, fill_value=0).values.astype(int)
+
+            x_gen = np.concatenate((x_gen, x_go), axis=1)
+            x_phn = np.concatenate(
+                (x_phn, np.zeros((x_phn.shape[0], x_phn.shape[1]))), axis=1
+            )
 
         graph = StellarGraph(
             pd.concat(
@@ -122,12 +140,21 @@ def _make_graph(
 
 
 def load_full_graph(
-    drop_disconnected: bool = True, homogenous: bool = True
+    drop_disconnected: bool = True,
+    homogenous: bool = True,
+    use_go_terms: bool = False,
+    n_go_terms: int = -1,
 ) -> StellarGraph:
     df_gen = _load_gen_df()
     df_phn = _load_phn_df(drop_disconnected)
 
-    graph = _make_graph(df_gen, df_phn, homogenous=homogenous)
+    graph = _make_graph(
+        df_gen,
+        df_phn,
+        homogenous=homogenous,
+        use_go_terms=use_go_terms,
+        n_go_terms=n_go_terms,
+    )
 
     return graph
 
@@ -139,11 +166,21 @@ def _extract_graph_edges_labels(
     genes: Optional[np.ndarray] = None,
     phenotypes: Optional[np.ndarray] = None,
     homogenous: bool = True,
+    use_go_terms: bool = False,
+    n_go_terms: int = -1,
 ) -> tuple:
     df_gen = df[df["Type"] == "G2G"]
     df_phn = df[df["Type"] == "P2G"]
 
-    graph = _make_graph(df_gen, df_phn, genes, phenotypes, homogenous=homogenous)
+    graph = _make_graph(
+        df_gen,
+        df_phn,
+        genes,
+        phenotypes,
+        homogenous=homogenous,
+        use_go_terms=use_go_terms,
+        n_go_terms=n_go_terms,
+    )
     edges = np.concatenate(
         [
             positive_edges[["Nod_A", "Nod_B"]].values,
@@ -166,6 +203,8 @@ def load_splits(
     sample_train_negatives: bool = True,
     sample_test_negatives: bool = False,
     homogenous: bool = True,
+    use_go_terms: bool = False,
+    n_go_terms: int = -1,
     drop_disconnected: bool = True,
     seed: int = 0,
 ) -> list:
@@ -232,6 +271,8 @@ def load_splits(
             genes=genes,
             phenotypes=phenotypes,
             homogenous=homogenous,
+            use_go_terms=use_go_terms,
+            n_go_terms=n_go_terms,
         )
 
         positive_train_edges = train_edges[i][0]
@@ -248,6 +289,8 @@ def load_splits(
             genes=genes,
             phenotypes=phenotypes,
             homogenous=homogenous,
+            use_go_terms=use_go_terms,
+            n_go_terms=n_go_terms,
         )
 
         splits.append(
@@ -264,8 +307,6 @@ if __name__ == "__main__":
     print(load_full_graph().info())
 
     print("-----")
-    print("-----")
-    print("-----")
 
     (train_graph, train_examples, train_labels), (
         test_graph,
@@ -278,8 +319,6 @@ if __name__ == "__main__":
     print(f"\tLabel distribution: {Counter(test_labels)}.")
     print(test_graph.info())
 
-    print("-----")
-    print("-----")
     print("-----")
 
     print("Train graph:")
