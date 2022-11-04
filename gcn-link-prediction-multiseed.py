@@ -9,8 +9,6 @@ from tensorflow import keras
 from graph import load_splits
 
 
-N_RUNS = 100
-
 OUT_PATH = Path("results_multiseed")
 
 
