@@ -110,7 +110,7 @@ def _make_graph(
 
             x_gen = np.concatenate((x_gen, x_go), axis=1)
             x_phn = np.concatenate(
-                (x_phn, np.zeros((x_phn.shape[0], x_phn.shape[1]))), axis=1
+                (x_phn, np.zeros((x_phn.shape[0], x_go.shape[1]))), axis=1
             )
 
         graph = StellarGraph(
