@@ -12,14 +12,14 @@ DATA_PATH = Path(__file__).parent / "data"
 
 
 def _load_gen_df() -> pd.DataFrame:
-    df_gen = pd.concat(
-        [
-            pd.read_csv(DATA_PATH / "GenGen_1to1.csv"),
-            pd.read_csv(DATA_PATH / "GenGen_1to2.csv"),
-            pd.read_csv(DATA_PATH / "GenGen_2to2.csv"),
-        ]
-    ).drop_duplicates()
+    df_gen = pd.read_csv(DATA_PATH / "GlobalGraph_PPI.csv").drop_duplicates()
     df_gen["Type"] = "G2G"
+
+    phenotypes = _get_phenotypes(_load_phn_df())
+
+    df_gen = df_gen[
+        ~(df_gen["Nod_A"].isin(phenotypes) | df_gen["Nod_B"].isin(phenotypes))
+    ]
 
     return df_gen
 
