@@ -310,6 +310,7 @@ def load_splits(
 
 
 if __name__ == "__main__":
+    print("Full graph:")
     print(load_full_graph().info())
 
     print("-----")
