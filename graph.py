@@ -11,15 +11,21 @@ from stellargraph import StellarGraph
 DATA_PATH = Path(__file__).parent / "data"
 
 
-def _load_gen_df() -> pd.DataFrame:
+def _load_gen_df(drop_disconnected: bool = True) -> pd.DataFrame:
     df_gen = pd.read_csv(DATA_PATH / "GlobalGraph_PPI.csv").drop_duplicates()
     df_gen["Type"] = "G2G"
 
-    phenotypes = _get_phenotypes(_load_phn_df())
+    phenotypes = _get_phenotypes(_load_phn_df(drop_disconnected))
 
     df_gen = df_gen[
         ~(df_gen["Nod_A"].isin(phenotypes) | df_gen["Nod_B"].isin(phenotypes))
     ]
+
+    if drop_disconnected:
+        graph = load_full_graph(drop_disconnected=False)
+        nodes = next(graph.connected_components())
+
+        df_gen = df_gen[df_gen["Nod_A"].isin(nodes) & df_gen["Nod_B"].isin(nodes)]
 
     return df_gen
 
@@ -145,7 +151,7 @@ def load_full_graph(
     use_go_terms: bool = False,
     n_go_terms: int = -1,
 ) -> StellarGraph:
-    df_gen = _load_gen_df()
+    df_gen = _load_gen_df(drop_disconnected)
     df_phn = _load_phn_df(drop_disconnected)
 
     graph = _make_graph(
@@ -208,7 +214,7 @@ def load_splits(
     drop_disconnected: bool = True,
     seed: int = 0,
 ) -> list:
-    df_gen = _load_gen_df()
+    df_gen = _load_gen_df(drop_disconnected)
     df_phn = _load_phn_df(drop_disconnected)
     df = _merge_dfs(df_gen, df_phn)
 
